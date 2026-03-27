@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nix develop:*)",
+      "Bash(direnv allow:*)",
+      "Bash(sqlc generate:*)",
+      "Bash(cat:*)",
+      "Bash(go doc:*)",
+      "Bash(go get:*)",
+      "Bash(go test:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(mkdir:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(go vet:*)"
+    ]
+  }
+}

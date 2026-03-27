@@ -9,115 +9,10 @@ import (
 	"time"
 
 	"github.com/Arkiv-Network/sqlite-bitmap-store/query"
-	"github.com/Arkiv-Network/sqlite-bitmap-store/store"
 	"github.com/RoaringBitmap/roaring/v2/roaring64"
-	"github.com/cockroachdb/pebble"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
-
-// ---------------------------------------------------------------------------
-// snapshotEvaluator bridges PebbleStore methods to the query.Evaluator
-// interface by binding a fixed pebble.Reader (typically a *pebble.Snapshot)
-// so that all reads see a consistent point-in-time view.
-// ---------------------------------------------------------------------------
-
-type snapshotEvaluator struct {
-	ps     *PebbleStore
-	reader pebble.Reader
-}
-
-var _ query.Evaluator = (*snapshotEvaluator)(nil)
-
-func (e *snapshotEvaluator) EvaluateAllCurrent(ctx context.Context) ([]uint64, error) {
-	return e.ps.EvaluateAllCurrent(e.reader)
-}
-
-// String attribute queries.
-
-func (e *snapshotEvaluator) GetMatchingStringValuesEqual(ctx context.Context, name, value string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesEqual(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesNotEqual(ctx context.Context, name, value string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesNotEqual(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesLessThan(ctx context.Context, name, value string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesLessThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesGreaterThan(ctx context.Context, name, value string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesGreaterThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesLessOrEqualThan(ctx context.Context, name, value string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesLessOrEqualThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesGreaterOrEqualThan(ctx context.Context, name, value string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesGreaterOrEqualThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesGlob(ctx context.Context, name, pattern string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesGlob(e.reader, name, pattern)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesNotGlob(ctx context.Context, name, pattern string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesNotGlob(e.reader, name, pattern)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesInclusion(ctx context.Context, name string, values []string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesInclusion(e.reader, name, values)
-}
-
-func (e *snapshotEvaluator) GetMatchingStringValuesNotInclusion(ctx context.Context, name string, values []string) ([]string, error) {
-	return e.ps.GetMatchingStringValuesNotInclusion(e.reader, name, values)
-}
-
-// Numeric attribute queries.
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesEqual(ctx context.Context, name string, value uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesEqual(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesNotEqual(ctx context.Context, name string, value uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesNotEqual(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesLessThan(ctx context.Context, name string, value uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesLessThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesGreaterThan(ctx context.Context, name string, value uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesGreaterThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesLessOrEqualThan(ctx context.Context, name string, value uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesLessOrEqualThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesGreaterOrEqualThan(ctx context.Context, name string, value uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesGreaterOrEqualThan(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesInclusion(ctx context.Context, name string, values []uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesInclusion(e.reader, name, values)
-}
-
-func (e *snapshotEvaluator) GetMatchingNumericValuesNotInclusion(ctx context.Context, name string, values []uint64) ([]uint64, error) {
-	return e.ps.GetMatchingNumericValuesNotInclusion(e.reader, name, values)
-}
-
-// Bitmap reconstruction.
-
-func (e *snapshotEvaluator) ReconstructStringBitmap(ctx context.Context, name, value string) (*store.Bitmap, error) {
-	return e.ps.GetStringBitmap(e.reader, name, value)
-}
-
-func (e *snapshotEvaluator) ReconstructNumericBitmap(ctx context.Context, name string, value uint64) (*store.Bitmap, error) {
-	return e.ps.GetNumericBitmap(e.reader, name, value)
-}
 
 // ---------------------------------------------------------------------------
 // Exported types
@@ -283,11 +178,8 @@ func (s *PebbleStore) QueryEntities(
 	snap := s.db.NewSnapshot()
 	defer snap.Close()
 
-	// 4. Create a snapshot-bound evaluator.
-	eval := &snapshotEvaluator{ps: s, reader: snap}
-
-	// 5. Evaluate the query to get matching IDs as a bitmap.
-	bitmap, err := q.Evaluate(ctx, eval)
+	// 4. Evaluate the query to get matching IDs as a bitmap.
+	bitmap, err := s.evaluateAST(ctx, snap, q)
 	if err != nil {
 		return nil, fmt.Errorf("error evaluating query: %w", err)
 	}

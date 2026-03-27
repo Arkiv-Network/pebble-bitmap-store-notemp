@@ -47,6 +47,9 @@ func (s *PebbleStore) UpsertPayload(batch *pebble.Batch, reader pebble.Reader, a
 			return 0, fmt.Errorf("pebblestore: allocate id: %w", allocErr)
 		}
 		id = newID
+		if err := s.incrementEntityCount(batch, reader); err != nil {
+			return 0, fmt.Errorf("pebblestore: increment entity count: %w", err)
+		}
 	} else if err != nil {
 		return 0, fmt.Errorf("pebblestore: lookup entity current: %w", err)
 	} else {
@@ -148,12 +151,16 @@ func (s *PebbleStore) DeletePayloadForEntityKey(batch *pebble.Batch, reader pebb
 		return fmt.Errorf("pebblestore: delete entity current: %w", err)
 	}
 
+	if err := s.decrementEntityCount(batch, reader); err != nil {
+		return fmt.Errorf("pebblestore: decrement entity count: %w", err)
+	}
+
 	return nil
 }
 
-// RetrievePayloads fetches multiple payloads by their IDs. The results are
+// retrievePayloads fetches multiple payloads by their IDs. The results are
 // returned sorted by ID in descending order.
-func (s *PebbleStore) RetrievePayloads(reader pebble.Reader, ids []uint64) ([]PayloadRow, error) {
+func (s *PebbleStore) retrievePayloads(reader pebble.Reader, ids []uint64) ([]PayloadRow, error) {
 	rows := make([]PayloadRow, 0, len(ids))
 
 	for _, id := range ids {

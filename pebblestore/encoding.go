@@ -7,6 +7,7 @@ const (
 	prefixPayload       byte = 0x02
 	prefixEntityCurrent byte = 0x03
 	prefixIDCounter     byte = 0x06
+	prefixEntityCount   byte = 0x07
 	prefixStringBitmap  byte = 0x10
 	prefixNumericBitmap byte = 0x20
 )
@@ -36,6 +37,11 @@ func entityCurrentKey(entityKey []byte) []byte {
 // idCounterKey returns the single key used to store the next ID counter.
 func idCounterKey() []byte {
 	return []byte{prefixIDCounter}
+}
+
+// entityCountKey returns the single key used to store the entity count.
+func entityCountKey() []byte {
+	return []byte{prefixEntityCount}
 }
 
 // stringBitmapKey returns the key for a string bitmap entry:

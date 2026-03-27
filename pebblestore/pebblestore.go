@@ -85,6 +85,27 @@ func NewPebbleStore(log *slog.Logger, dbPath string) (*PebbleStore, error) {
 		return nil, fmt.Errorf("pebblestore: read id counter: %w", err)
 	}
 
+	// Migrate entity count if the key does not yet exist.
+	_, closer, err = db.Get(entityCountKey())
+	if err == nil {
+		closer.Close()
+	} else if err == pebble.ErrNotFound {
+		count, countErr := s.countEntitiesByScan(db)
+		if countErr != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("pebblestore: migrate entity count: %w", countErr)
+		}
+		var buf [8]byte
+		binary.BigEndian.PutUint64(buf[:], count)
+		if writeErr := db.Set(entityCountKey(), buf[:], pebble.Sync); writeErr != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("pebblestore: persist migrated entity count: %w", writeErr)
+		}
+	} else {
+		_ = db.Close()
+		return nil, fmt.Errorf("pebblestore: read entity count: %w", err)
+	}
+
 	log.Info("pebblestore opened", "path", dbPath, "nextID", s.nextIDVal)
 	return s, nil
 }
@@ -124,6 +145,74 @@ func (s *PebbleStore) UpsertLastBlock(batch *pebble.Batch, block uint64) error {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], block)
 	return batch.Set(lastBlockKey(), buf[:], pebble.Sync)
+}
+
+// GetNumberOfEntities reads the entity count from the given reader.
+func (s *PebbleStore) GetNumberOfEntities(reader pebble.Reader) (uint64, error) {
+	val, closer, err := reader.Get(entityCountKey())
+	if err == pebble.ErrNotFound {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("pebblestore: get entity count: %w", err)
+	}
+	defer closer.Close()
+	if len(val) != 8 {
+		return 0, fmt.Errorf("pebblestore: entity count value has unexpected length %d", len(val))
+	}
+	return binary.BigEndian.Uint64(val), nil
+}
+
+// countEntitiesByScan counts entity-current keys (0x03 prefix) by scanning.
+// Used only during migration for databases created before entity count tracking.
+func (s *PebbleStore) countEntitiesByScan(reader pebble.Reader) (uint64, error) {
+	prefix := []byte{prefixEntityCurrent}
+	iter, err := reader.NewIter(&pebble.IterOptions{
+		LowerBound: prefix,
+		UpperBound: prefixUpperBound(prefix),
+	})
+	if err != nil {
+		return 0, err
+	}
+	defer iter.Close()
+
+	var count uint64
+	for iter.First(); iter.Valid(); iter.Next() {
+		count++
+	}
+	if err := iter.Error(); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// incrementEntityCount reads the current count from reader, increments it,
+// and writes the new value to the batch.
+func (s *PebbleStore) incrementEntityCount(batch *pebble.Batch, reader pebble.Reader) error {
+	count, err := s.GetNumberOfEntities(reader)
+	if err != nil {
+		return err
+	}
+	count++
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], count)
+	return batch.Set(entityCountKey(), buf[:], pebble.Sync)
+}
+
+// decrementEntityCount reads the current count from reader, decrements it,
+// and writes the new value to the batch.
+func (s *PebbleStore) decrementEntityCount(batch *pebble.Batch, reader pebble.Reader) error {
+	count, err := s.GetNumberOfEntities(reader)
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("pebblestore: entity count underflow")
+	}
+	count--
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], count)
+	return batch.Set(entityCountKey(), buf[:], pebble.Sync)
 }
 
 // nextID atomically allocates a new unique ID and persists the updated counter

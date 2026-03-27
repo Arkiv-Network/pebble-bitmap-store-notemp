@@ -12,7 +12,7 @@ import (
 
 func (s *PebbleStore) evaluateAST(ctx context.Context, reader pebble.Reader, ast *query.AST) (*roaring64.Bitmap, error) {
 	if ast.Expr == nil {
-		ids, err := s.EvaluateAllCurrent(reader)
+		ids, err := s.evaluateAllCurrent(reader)
 		if err != nil {
 			return nil, err
 		}

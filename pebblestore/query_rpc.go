@@ -225,7 +225,7 @@ fillLoop:
 
 		nextIDs := nextIDs(nextBatchSize)
 
-		payloads, err := s.RetrievePayloads(snap, nextIDs)
+		payloads, err := s.retrievePayloads(snap, nextIDs)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving payloads: %w", err)
 		}

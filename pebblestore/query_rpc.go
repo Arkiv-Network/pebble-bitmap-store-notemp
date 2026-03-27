@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/query"
+	"github.com/Arkiv-Network/pebble-bitmap-store-notemp/query"
 	"github.com/RoaringBitmap/roaring/v2/roaring64"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

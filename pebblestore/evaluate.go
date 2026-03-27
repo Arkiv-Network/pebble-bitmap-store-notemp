@@ -7,7 +7,7 @@ import (
 	"github.com/RoaringBitmap/roaring/v2/roaring64"
 	"github.com/cockroachdb/pebble"
 
-	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/query"
+	"github.com/Arkiv-Network/pebble-bitmap-store-notemp/query"
 )
 
 func (s *PebbleStore) evaluateAST(ctx context.Context, reader pebble.Reader, ast *query.AST) (*roaring64.Bitmap, error) {

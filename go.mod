@@ -1,4 +1,4 @@
-module github.com/Arkiv-Network/sqlite-bitmap-store-notemp
+module github.com/Arkiv-Network/pebble-bitmap-store-notemp
 
 go 1.25.4
 

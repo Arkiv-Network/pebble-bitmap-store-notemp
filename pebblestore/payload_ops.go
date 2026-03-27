@@ -8,7 +8,7 @@ import (
 
 	"github.com/cockroachdb/pebble"
 
-	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/store"
+	"github.com/Arkiv-Network/pebble-bitmap-store-notemp/store"
 )
 
 // UpsertPayloadParams holds the fields needed to insert or update a payload.

@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/pebblestore"
+	"github.com/Arkiv-Network/pebble-bitmap-store-notemp/pebblestore"
 	"github.com/urfave/cli/v2"
 )
 

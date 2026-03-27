@@ -13,8 +13,8 @@ import (
 
 	arkivevents "github.com/Arkiv-Network/arkiv-events"
 	"github.com/Arkiv-Network/arkiv-events/events"
-	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/pebblestore"
-	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/pusher"
+	"github.com/Arkiv-Network/pebble-bitmap-store-notemp/pebblestore"
+	"github.com/Arkiv-Network/pebble-bitmap-store-notemp/pusher"
 )
 
 var _ = Describe("PushIterator", func() {

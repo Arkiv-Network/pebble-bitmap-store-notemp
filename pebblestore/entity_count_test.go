@@ -54,7 +54,7 @@ var _ = Describe("Entity Count", func() {
 		})
 
 		It("should start at zero for a fresh store", func() {
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(0)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(0)))
 		})
 
 		It("should increment on new entity creation", func() {
@@ -65,7 +65,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(1)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(1)))
 
 			batch2 := s.DB().NewIndexedBatch()
 			defer batch2.Close()
@@ -74,7 +74,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch2.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(2)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(2)))
 		})
 
 		It("should not increment on entity update (same key)", func() {
@@ -85,7 +85,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(1)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(1)))
 
 			// Update same entity with different payload.
 			batch2 := s.DB().NewIndexedBatch()
@@ -97,7 +97,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch2.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(1)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(1)))
 		})
 
 		It("should decrement on delete", func() {
@@ -108,7 +108,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(1)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(1)))
 
 			batch2 := s.DB().NewIndexedBatch()
 			defer batch2.Close()
@@ -117,7 +117,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch2.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(0)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(0)))
 		})
 
 		It("should handle mixed create/update/delete operations", func() {
@@ -128,7 +128,7 @@ var _ = Describe("Entity Count", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(batch.Commit(pebble.Sync)).To(Succeed())
 			}
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(3)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(3)))
 
 			// Update entity 0x01.
 			batch := s.DB().NewIndexedBatch()
@@ -138,7 +138,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(3)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(3)))
 
 			// Delete entity 0x02.
 			batch2 := s.DB().NewIndexedBatch()
@@ -146,7 +146,7 @@ var _ = Describe("Entity Count", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(batch2.Commit(pebble.Sync)).To(Succeed())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(2)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(2)))
 		})
 
 		It("should handle multiple creates and deletes back to zero", func() {
@@ -158,7 +158,7 @@ var _ = Describe("Entity Count", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(batch.Commit(pebble.Sync)).To(Succeed())
 			}
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(5)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(5)))
 
 			for _, b := range keys {
 				batch := s.DB().NewIndexedBatch()
@@ -166,7 +166,7 @@ var _ = Describe("Entity Count", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(batch.Commit(pebble.Sync)).To(Succeed())
 			}
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(0)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(0)))
 		})
 	})
 
@@ -199,14 +199,14 @@ var _ = Describe("Entity Count", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(batch.Commit(pebble.Sync)).To(Succeed())
 			}
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(3)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(3)))
 
 			s.Close()
 
 			s, err = pebblestore.NewPebbleStore(logger, dbPath)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(3)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(3)))
 		})
 
 		It("should migrate count from existing database without count key", func() {
@@ -222,7 +222,7 @@ var _ = Describe("Entity Count", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(batch.Commit(pebble.Sync)).To(Succeed())
 			}
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(2)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(2)))
 
 			// Delete the entity count key to simulate a pre-migration database.
 			err = s.DB().Delete([]byte{0x07}, pebble.Sync)
@@ -234,7 +234,7 @@ var _ = Describe("Entity Count", func() {
 			s, err = pebblestore.NewPebbleStore(logger, dbPath)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(s.GetNumberOfEntities(s.DB())).To(Equal(uint64(2)))
+			Expect(s.GetNumberOfEntities()).To(Equal(uint64(2)))
 		})
 	})
 })

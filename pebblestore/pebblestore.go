@@ -37,11 +37,11 @@ func NewPebbleStore(log *slog.Logger, dbPath string) (*PebbleStore, error) {
 	}
 
 	opts := &pebble.Options{
-		Cache:        cache,
-		MemTableSize: 64 << 20,
+		Cache:                    cache,
+		MemTableSize:             64 << 20,
 		MaxConcurrentCompactions: func() int { return 2 },
-		BytesPerSync:    1 << 20,
-		WALBytesPerSync: 1 << 20,
+		BytesPerSync:             1 << 20,
+		WALBytesPerSync:          1 << 20,
 		Levels: []pebble.LevelOptions{
 			levelOpts(pebble.SnappyCompression), // L0
 			levelOpts(pebble.SnappyCompression), // L1
@@ -61,7 +61,7 @@ func NewPebbleStore(log *slog.Logger, dbPath string) (*PebbleStore, error) {
 	} else {
 		opts.FS = vfs.NewMem()
 	}
-	
+
 	db, err := pebble.Open(dbPath, opts)
 	if err != nil {
 		return nil, fmt.Errorf("pebblestore: open database: %w", err)
@@ -87,9 +87,10 @@ func NewPebbleStore(log *slog.Logger, dbPath string) (*PebbleStore, error) {
 
 	// Migrate entity count if the key does not yet exist.
 	_, closer, err = db.Get(entityCountKey())
-	if err == nil {
+	switch err {
+	case nil:
 		closer.Close()
-	} else if err == pebble.ErrNotFound {
+	case pebble.ErrNotFound:
 		count, countErr := s.countEntitiesByScan(db)
 		if countErr != nil {
 			_ = db.Close()
@@ -101,7 +102,7 @@ func NewPebbleStore(log *slog.Logger, dbPath string) (*PebbleStore, error) {
 			_ = db.Close()
 			return nil, fmt.Errorf("pebblestore: persist migrated entity count: %w", writeErr)
 		}
-	} else {
+	default:
 		_ = db.Close()
 		return nil, fmt.Errorf("pebblestore: read entity count: %w", err)
 	}
@@ -147,9 +148,14 @@ func (s *PebbleStore) UpsertLastBlock(batch *pebble.Batch, block uint64) error {
 	return batch.Set(lastBlockKey(), buf[:], pebble.Sync)
 }
 
-// GetNumberOfEntities reads the entity count from the given reader.
-func (s *PebbleStore) GetNumberOfEntities(reader pebble.Reader) (uint64, error) {
-	val, closer, err := reader.Get(entityCountKey())
+// GetNumberOfEntities reads the entity count from the db.
+func (s *PebbleStore) GetNumberOfEntities() (uint64, error) {
+	return s.getNumberOfEntities(s.db)
+}
+
+// GetNumberOfEntities reads the entity count from the db.
+func (s *PebbleStore) getNumberOfEntities(r pebble.Reader) (uint64, error) {
+	val, closer, err := r.Get(entityCountKey())
 	if err == pebble.ErrNotFound {
 		return 0, nil
 	}
@@ -189,7 +195,7 @@ func (s *PebbleStore) countEntitiesByScan(reader pebble.Reader) (uint64, error) 
 // incrementEntityCount reads the current count from reader, increments it,
 // and writes the new value to the batch.
 func (s *PebbleStore) incrementEntityCount(batch *pebble.Batch, reader pebble.Reader) error {
-	count, err := s.GetNumberOfEntities(reader)
+	count, err := s.getNumberOfEntities(reader)
 	if err != nil {
 		return err
 	}
@@ -202,7 +208,7 @@ func (s *PebbleStore) incrementEntityCount(batch *pebble.Batch, reader pebble.Re
 // decrementEntityCount reads the current count from reader, decrements it,
 // and writes the new value to the batch.
 func (s *PebbleStore) decrementEntityCount(batch *pebble.Batch, reader pebble.Reader) error {
-	count, err := s.GetNumberOfEntities(reader)
+	count, err := s.getNumberOfEntities(reader)
 	if err != nil {
 		return err
 	}

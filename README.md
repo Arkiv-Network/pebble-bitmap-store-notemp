@@ -1,15 +1,16 @@
-# SQLite Bitmap Store
+# Pebble Bitmap Store
 
-A Go-based system for efficiently storing, indexing, and querying blockchain event data from the Arkiv Network. Uses SQLite for persistence and Roaring Bitmaps for fast attribute-based filtering.
+A Go-based system for efficiently storing, indexing, and querying blockchain event data from the Arkiv Network. Uses PebbleDB for persistence and Roaring Bitmaps for fast attribute-based filtering.
 
 ## Features
 
 - **Bitmap Indexing**: Uses Roaring Bitmap compression for memory-efficient attribute indexes
-- **Custom Query Language**: Boolean expressions with comparisons, glob patterns, and set operations
+- **Custom Query Language**: Boolean expressions with comparisons, glob patterns, set operations (`in`/`not in`), and keyword alternatives (`AND`/`OR`/`NOT`)
 - **Blockchain Event Processing**: Handles Create, Update, Delete, Expire, ExtendBTL, and ChangeOwner operations
-- **Synthetic Attributes**: Automatic indexing of `$owner`, `$creator`, `$key`, `$expiration`, `$createdAtBlock`, `$sequence`, `$txIndex`, `$opIndex`
-- **WAL Mode**: Write-Ahead Logging for reliability and concurrent reads
-
+- **Synthetic Attributes**: Automatic indexing of `$owner`, `$creator`, `$key`, `$expiration`, `$createdAtBlock`, `$lastModifiedAtBlock`, `$sequence`, `$txIndex`, `$opIndex`
+- **PebbleDB Storage**: Key-value store with prefix-based organization, Snappy/Zstd compression, and bloom filters
+- **Paginated Queries**: Cursor-based pagination with configurable page size (max 200 results)
+- **Snapshot Reads**: Queries use PebbleDB snapshots for consistent point-in-time reads
 
 ## Usage
 
@@ -39,25 +40,31 @@ go run ./cmd/query --db-path arkiv-data.db '$owner = "0x1234..."'
 
 | Operator | Description |
 |----------|-------------|
-| `&&` | Logical AND |
-| `\|\|` | Logical OR |
-| `!` | Logical NOT |
+| `&&`, `AND` | Logical AND |
+| `\|\|`, `OR` | Logical OR |
+| `!`, `NOT` | Logical NOT |
 | `=`, `!=` | Equality comparison |
 | `<`, `>`, `<=`, `>=` | Numeric comparison |
-| `~` | Glob pattern match |
-| `!~` | Glob pattern not match |
+| `~`, `GLOB` | Glob pattern match |
+| `!~`, `NOT GLOB` | Glob pattern not match |
+| `in` | Set inclusion |
+| `not in` | Set exclusion |
 
 ### Special Attributes
 
-| Attribute | Description |
-|-----------|-------------|
-| `$owner` | Entity owner address |
-| `$creator` | Entity creator address |
-| `$key` | Entity key |
-| `$expiration` | Expiration block number |
-| `$sequence` | Sequence number |
-| `$all` | Match all entities |
-| `*` | Wildcard (match all) |
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `$owner` | string | Entity owner address |
+| `$creator` | string | Entity creator address |
+| `$key` | string | Entity key |
+| `$expiration` | numeric | Expiration block number |
+| `$createdAtBlock` | numeric | Block where entity was created |
+| `$lastModifiedAtBlock` | numeric | Block of last modification |
+| `$sequence` | numeric | Composite: (blockNum << 32) \| (txIndex << 16) \| opIndex |
+| `$txIndex` | numeric | Transaction index in block (stored, not bitmap-indexed) |
+| `$opIndex` | numeric | Operation index in transaction (stored, not bitmap-indexed) |
+| `$all` | - | Match all entities |
+| `*` | - | Wildcard (match all) |
 
 ### Examples
 
@@ -66,29 +73,33 @@ type = "nft" && status = "active"
 $owner = "0xabc..." || $creator = "0xabc..."
 name ~ "test*" && !(status = "deleted")
 price >= 100 && price <= 1000
+type in ("nft" "token")
+$createdAtBlock > 1000
 ```
 
-## Database Schema
+## Storage Layout
 
-Four main tables:
+Uses PebbleDB with prefix-based key organization:
 
-- **payloads**: Entity data with key, owner, creator, expiration, and JSON payload
-- **last_block**: Tracks the last processed block number
-- **string_attributes_values_bitmaps**: Bitmap indexes for string attributes
-- **numeric_attributes_values_bitmaps**: Bitmap indexes for numeric attributes
+| Prefix | Description |
+|--------|-------------|
+| `0x01` | Last processed block number |
+| `0x02` | Payload records (prefix + 8-byte big-endian ID) |
+| `0x03` | Entity current pointer (32-byte entity key -> ID) |
+| `0x06` | ID counter for unique ID allocation |
+| `0x10` | String attribute bitmap indexes |
+| `0x20` | Numeric attribute bitmap indexes |
 
 ## Dependencies
 
 | Package | Purpose |
 |---------|---------|
-| [roaring](https://github.com/RoaringBitmap/roaring) | Bitmap compression and operations |
+| [pebble](https://github.com/cockroachdb/pebble) | Key-value storage engine |
+| [roaring/v2](https://github.com/RoaringBitmap/roaring) | Bitmap compression and operations |
 | [participle/v2](https://github.com/alecthomas/participle) | Query language parser |
-| [go-sqlite3](https://github.com/mattn/go-sqlite3) | SQLite driver |
-| [golang-migrate](https://github.com/golang-migrate/migrate) | Database migrations |
 | [arkiv-events](https://github.com/Arkiv-Network/arkiv-events) | Blockchain event structures |
 | [go-ethereum](https://github.com/ethereum/go-ethereum) | Address and Hash types |
-| [urfave/cli](https://github.com/urfave/cli) | CLI framework |
-| [sqlc](https://sqlc.dev) | Type-safe SQL code generation |
+| [urfave/cli/v2](https://github.com/urfave/cli) | CLI framework |
 
 ## Development
 
@@ -102,8 +113,8 @@ nix develop
 direnv allow
 ```
 
-Regenerate SQL code:
+Run tests:
 
 ```bash
-go generate ./...
+go test ./...
 ```

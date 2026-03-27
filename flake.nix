@@ -1,5 +1,5 @@
 {
-  description = "sqlite-bitmap-store";
+  description = "pebble-bitmap-store-notemp";
   inputs = {
     nixpkgs.url = "https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz";
 

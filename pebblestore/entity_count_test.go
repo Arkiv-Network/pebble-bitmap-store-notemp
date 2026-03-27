@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/Arkiv-Network/sqlite-bitmap-store/pebblestore"
-	"github.com/Arkiv-Network/sqlite-bitmap-store/store"
+	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/pebblestore"
+	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/store"
 )
 
 // entityKey returns a 32-byte key with the given byte repeated.

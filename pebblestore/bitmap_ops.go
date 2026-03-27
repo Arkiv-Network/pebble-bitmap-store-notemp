@@ -5,7 +5,7 @@ import (
 
 	"github.com/cockroachdb/pebble"
 
-	"github.com/Arkiv-Network/sqlite-bitmap-store/store"
+	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/store"
 )
 
 // GetStringBitmap returns the bitmap for a (name, value) pair, or an empty

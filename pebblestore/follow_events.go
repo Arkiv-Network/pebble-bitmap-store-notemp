@@ -13,7 +13,7 @@ import (
 
 	arkivevents "github.com/Arkiv-Network/arkiv-events"
 	"github.com/Arkiv-Network/arkiv-events/events"
-	"github.com/Arkiv-Network/sqlite-bitmap-store/store"
+	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/store"
 )
 
 var (

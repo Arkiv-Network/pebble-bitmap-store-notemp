@@ -7,7 +7,7 @@ import (
 	"github.com/cockroachdb/pebble"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/Arkiv-Network/sqlite-bitmap-store/store"
+	"github.com/Arkiv-Network/sqlite-bitmap-store-notemp/store"
 )
 
 type nameValue[T any] struct {

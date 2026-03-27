@@ -345,15 +345,18 @@ func (s *PebbleStore) FollowEvents(ctx context.Context, iterator arkivevents.Bat
 					"ownerChanges", blockStat.ownerChanges)
 			}
 
-			if err := s.UpsertLastBlock(pBatch, lastBlock); err != nil {
+			err = s.UpsertLastBlock(pBatch, lastBlock)
+			if err != nil {
 				return fmt.Errorf("failed to upsert last block: %w", err)
 			}
 
-			if err := cache.Flush(); err != nil {
+			err = cache.Flush()
+			if err != nil {
 				return fmt.Errorf("failed to flush bitmap cache: %w", err)
 			}
 
-			if err := pBatch.Commit(pebble.Sync); err != nil {
+			err = pBatch.Commit(pebble.Sync)
+			if err != nil {
 				return fmt.Errorf("failed to commit pebble batch: %w", err)
 			}
 
@@ -380,30 +383,14 @@ func (s *PebbleStore) FollowEvents(ctx context.Context, iterator arkivevents.Bat
 					totalExtends += stat.extends
 					totalOwnerChanges += stat.ownerChanges
 
-					if stat.creates > 0 {
-						metricCreates.Inc(stat.creates)
-					}
-					if stat.createsBytes > 0 {
-						metricCreatesBytes.Inc(stat.createsBytes)
-					}
-					if stat.updates > 0 {
-						metricUpdates.Inc(stat.updates)
-					}
-					if stat.updatesBytes > 0 {
-						metricUpdatesBytes.Inc(stat.updatesBytes)
-					}
-					if stat.deletes > 0 {
-						metricDeletes.Inc(stat.deletes)
-					}
-					if stat.deletesBytes > 0 {
-						metricDeletesBytes.Inc(stat.deletesBytes)
-					}
-					if stat.extends > 0 {
-						metricExtends.Inc(stat.extends)
-					}
-					if stat.ownerChanges > 0 {
-						metricOwnerChanges.Inc(stat.ownerChanges)
-					}
+					metricCreates.Inc(stat.creates)
+					metricCreatesBytes.Inc(stat.createsBytes)
+					metricUpdates.Inc(stat.updates)
+					metricUpdatesBytes.Inc(stat.updatesBytes)
+					metricDeletes.Inc(stat.deletes)
+					metricDeletesBytes.Inc(stat.deletesBytes)
+					metricExtends.Inc(stat.extends)
+					metricOwnerChanges.Inc(stat.ownerChanges)
 				}
 			}
 

@@ -194,11 +194,13 @@ func (s *PebbleStore) evaluateEquality(_ context.Context, reader pebble.Reader, 
 			return s.reconstructStringBitmapsOR(reader, e.Var, values)
 		}
 
-		values, err := s.GetMatchingStringValuesEqual(reader, e.Var, *e.Value.String)
+		// Direct point lookup: the exact key [prefix][nameLen][name][valueLen][value]
+		// already exists in the index; no need to scan all values under the name prefix.
+		b, err := s.GetStringBitmap(reader, e.Var, *e.Value.String)
 		if err != nil {
 			return nil, err
 		}
-		return s.reconstructStringBitmapsOR(reader, e.Var, values)
+		return b.Bitmap, nil
 	}
 
 	if e.IsNot {
@@ -209,11 +211,12 @@ func (s *PebbleStore) evaluateEquality(_ context.Context, reader pebble.Reader, 
 		return s.reconstructNumericBitmapsOR(reader, e.Var, values)
 	}
 
-	values, err := s.GetMatchingNumericValuesEqual(reader, e.Var, *e.Value.Number)
+	// Direct point lookup for numeric equality.
+	b, err := s.GetNumericBitmap(reader, e.Var, *e.Value.Number)
 	if err != nil {
 		return nil, err
 	}
-	return s.reconstructNumericBitmapsOR(reader, e.Var, values)
+	return b.Bitmap, nil
 }
 
 func (s *PebbleStore) evaluateInclusion(_ context.Context, reader pebble.Reader, e *query.Inclusion) (*roaring64.Bitmap, error) {

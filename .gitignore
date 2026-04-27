@@ -10,6 +10,7 @@
 .DS_Store
 */**/.DS_Store
 .direnv
+.vscode
 
 #*
 .#*
@@ -47,3 +48,8 @@ output/
 
 !.claude/settings.local.json
 arkiv-data.db*
+arkiv-data
+
+#binaries
+/server
+/create-entity

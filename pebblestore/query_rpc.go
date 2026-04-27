@@ -156,6 +156,7 @@ func (s *PebbleStore) QueryEntities(
 				return nil, fmt.Errorf("error getting last block: %w", err)
 			}
 			if lastBlock >= options.GetAtBlock() {
+				res.BlockNumber = hexutil.Uint64(lastBlock)
 				break
 			}
 			select {

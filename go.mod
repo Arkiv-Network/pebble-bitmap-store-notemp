@@ -15,6 +15,12 @@ require (
 )
 
 require (
+	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
+)
+
+require (
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect

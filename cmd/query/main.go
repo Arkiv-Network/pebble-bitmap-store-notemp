@@ -5,89 +5,88 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
 	"time"
 
-	"github.com/Arkiv-Network/pebble-bitmap-store-notemp/pebblestore"
+	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/urfave/cli/v2"
 )
 
 func main() {
-
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-	cfg := struct {
-		dbPath string
-	}{}
+	var (
+		serverURL string
+		port      int
+	)
 
 	app := &cli.App{
-		Name:  "query",
-		Usage: "Query the PebbleDB database",
+		Name:      "query",
+		Usage:     "Query entities via the Arkiv JSON-RPC server",
+		ArgsUsage: "<query>",
 		Flags: []cli.Flag{
-			&cli.PathFlag{
-				Name:        "db-path",
-				Value:       "arkiv-data.db",
-				Destination: &cfg.dbPath,
-				EnvVars:     []string{"DB_PATH"},
+			&cli.StringFlag{
+				Name:        "server",
+				Value:       "http://localhost:9545",
+				Usage:       "JSON-RPC server URL",
+				Destination: &serverURL,
+				EnvVars:     []string{"ARKIV_SERVER"},
+			},
+			&cli.IntFlag{
+				Name:        "port",
+				Value:       0,
+				Usage:       "override port in the server URL (e.g. --port 8545)",
+				Destination: &port,
 			},
 		},
 		Action: func(c *cli.Context) error {
-
 			queryString := c.Args().First()
-
 			if queryString == "" {
 				return fmt.Errorf("query is required")
 			}
 
-			st, err := pebblestore.NewPebbleStore(logger, cfg.dbPath)
-			if err != nil {
-				return fmt.Errorf("failed to create PebbleDB store: %w", err)
+			if port != 0 {
+				serverURL = fmt.Sprintf("http://localhost:%d", port)
 			}
-			defer st.Close()
 
-			startTime := time.Now()
+			client, err := ethrpc.DialContext(context.Background(), serverURL)
+			if err != nil {
+				return fmt.Errorf("connect to %s: %w", serverURL, err)
+			}
+			defer client.Close()
 
-			r, err := st.QueryEntities(
-				context.Background(),
-				queryString,
-				&pebblestore.Options{
-					IncludeData: &pebblestore.IncludeData{
-						Key:                         true,
-						ContentType:                 true,
-						Payload:                     true,
-						Attributes:                  true,
-						SyntheticAttributes:         true,
-						Expiration:                  true,
-						Creator:                     true,
-						Owner:                       true,
-						CreatedAtBlock:              true,
-						LastModifiedAtBlock:         true,
-						TransactionIndexInBlock:     true,
-						OperationIndexInTransaction: true,
-					},
+			options := map[string]any{
+				"includeData": map[string]bool{
+					"key":                         true,
+					"contentType":                 true,
+					"payload":                     true,
+					"attributes":                  true,
+					"syntheticAttributes":         true,
+					"expiration":                  true,
+					"creator":                     true,
+					"owner":                       true,
+					"createdAtBlock":              true,
+					"lastModifiedAtBlock":         true,
+					"transactionIndexInBlock":     true,
+					"operationIndexInTransaction": true,
 				},
-			)
-
-			duration := time.Since(startTime)
-
-			if err != nil {
-				return fmt.Errorf("failed to query entities: %w", err)
 			}
+
+			var result json.RawMessage
+			startTime := time.Now()
+			if err := client.Call(&result, "arkiv_query", queryString, options); err != nil {
+				return fmt.Errorf("query failed: %w", err)
+			}
+			duration := time.Since(startTime)
 
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", "  ")
-			enc.Encode(r)
+			enc.Encode(result)
 
 			fmt.Fprintf(os.Stderr, "Query time: %s\n", duration)
-
 			return nil
-
 		},
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

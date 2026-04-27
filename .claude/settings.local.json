@@ -11,7 +11,8 @@
       "Bash(go mod tidy:*)",
       "Bash(mkdir:*)",
       "Bash(git ls-tree:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(go build:*)"
     ]
   }
 }

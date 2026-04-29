@@ -36,6 +36,9 @@ func (s *ArkivService) CommitChain(ctx context.Context, req CommitChainRequest) 
 		totalOps := 0
 		for _, tx := range b.Transactions {
 			totalOps += len(tx.Operations)
+			if totalOps >= 1 {
+				s.log.Info("processing block", "number", b.Header.Number, "transactions", len(b.Transactions), "operations", totalOps)
+			}
 		}
 		s.log.Info("commitChain received block", "number", b.Header.Number, "transactions", len(b.Transactions), "operations", totalOps)
 	}

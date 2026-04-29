@@ -45,12 +45,11 @@ type ChainOperation struct {
 	Attributes    []Attribute    `json:"attributes"`
 }
 
-// Attribute holds a string, numeric, or entity-key reference value.
+// Attribute holds a typed attribute value.
 type Attribute struct {
-	Key          string          `json:"key"`
-	StringValue  *string         `json:"stringValue,omitempty"`
-	NumericValue *hexutil.Uint64 `json:"numericValue,omitempty"`
-	EntityKey    *common.Hash    `json:"entityKey,omitempty"`
+	ValueType string `json:"valueType"`
+	Name      string `json:"name"`
+	Value     string `json:"value"`
 }
 
 // CommitChainResponse is the result returned by arkiv_commitChain.
@@ -185,13 +184,13 @@ func attributesToMaps(attributes []Attribute) (map[string]string, map[string]uin
 	strAttrs := map[string]string{}
 	numAttrs := map[string]uint64{}
 	for _, a := range attributes {
-		switch {
-		case a.StringValue != nil:
-			strAttrs[a.Key] = *a.StringValue
-		case a.NumericValue != nil:
-			numAttrs[a.Key] = uint64(*a.NumericValue)
-		case a.EntityKey != nil:
-			strAttrs[a.Key] = a.EntityKey.Hex()
+		switch a.ValueType {
+		case "string", "entityKey":
+			strAttrs[a.Name] = a.Value
+		case "uint":
+			if v, err := hexutil.DecodeUint64(a.Value); err == nil {
+				numAttrs[a.Name] = v
+			}
 		}
 	}
 	return strAttrs, numAttrs
